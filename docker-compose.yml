@@ -1,0 +1,39 @@
+services:
+  web:
+    build: .
+    image: tender-deadline-check:local
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_SECRET_KEY: local-demo-secret
+      DEMO_PROJECT_NO: GSB-2026-001
+      DEMO_LIST_URL: http://localhost:8080/notices/page-1.html
+      SAMPLE_SITE_PUBLIC_URL: http://localhost:8080
+      SAMPLE_SITE_INTERNAL_URL: http://sample-site:8080
+      MAX_LIST_PAGES: 15
+      MAX_DETAIL_PAGES: 80
+      TZ: Asia/Shanghai
+    depends_on:
+      sample-site:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/healthz', timeout=3)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  sample-site:
+    image: tender-deadline-check:local
+    build: .
+    command: ["python", "-m", "http.server", "8080", "--bind", "0.0.0.0", "--directory", "/app/sample_site"]
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/index.html', timeout=3)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped

@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>招标截标状态核对</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="hero">
+    <div class="container hero-inner">
+      <div>
+        <p class="eyebrow">Tender Deadline Check</p>
+        <h1>招标截标状态核对</h1>
+        <p class="hero-copy">抓取同站分页与公告详情，按发布时间串联原公告、更正公告和取消公告，辅助采购专员判断是否仍可按公告截止时间投标。</p>
+      </div>
+      <div class="hero-card" aria-label="核对规则">
+        <strong>核对规则</strong>
+        <span>同站分页全量抓取</span>
+        <span>跨页重复只计一次</span>
+        <span>取消后普通更正不恢复招标</span>
+        <span>异常或冲突标记“待核实”</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="panel search-panel" aria-labelledby="search-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">输入查询条件</p>
+          <h2 id="search-title">项目与公告列表</h2>
+        </div>
+        <a class="sample-site-link" href="http://localhost:8080/index.html" target="_blank" rel="noopener noreferrer">打开本地样本站点</a>
+      </div>
+
+      <form method="post" class="search-form">
+        <label>
+          <span>项目编号</span>
+          <input name="project_no" value="{{ project_no }}" placeholder="例如：GSB-2026-001" required autocomplete="off">
+        </label>
+        <label class="wide">
+          <span>公告列表网址</span>
+          <input name="list_url" type="url" value="{{ list_url }}" placeholder="http://localhost:8080/notices/page-1.html" required autocomplete="off">
+        </label>
+        <div class="form-actions">
+          <button type="submit">开始核对</button>
+          <a href="/" class="secondary-action">恢复示例</a>
+        </div>
+      </form>
+
+      <div class="sample-projects" aria-label="样本项目">
+        <span>样本项目：</span>
+        <code>GSB-2026-001</code><em>可投标</em>
+        <code>GSB-2026-002</code><em>已取消</em>
+        <code>GSB-2026-003</code><em>时间冲突</em>
+        <code>GSB-2026-004</code><em>详情失败</em>
+        <code>GSB-2026-005</code><em>已截止</em>
+      </div>
+    </section>
+
+    {% if error %}
+    <section class="alert error" role="alert">
+      <strong>无法完成核对</strong>
+      <p>{{ error }}</p>
+    </section>
+    {% endif %}
+
+    {% if result %}
+    <section class="result-banner status-{{ result.status }}" aria-live="polite">
+      <div class="result-main">
+        <p class="eyebrow">核对结论</p>
+        <h2>{{ result.status_label }}</h2>
+        <p>{{ result.headline }}</p>
+      </div>
+      <div class="deadline-card">
+        {% if result.status == 'cancelled' %}
+          <span>取消公告时间</span>
+          <strong>{{ result.cancelled_at|dt }}</strong>
+          <small>北京时间</small>
+        {% elif result.deadline %}
+          <span>当前截标时间</span>
+          <strong>{{ result.deadline|dt }}</strong>
+          <small>北京时间</small>
+        {% else %}
+          <span>当前截标时间</span>
+          <strong>待核实</strong>
+          <small>请以人工核验为准</small>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="summary-grid" aria-label="核对摘要">
+      <div><span>项目编号</span><strong>{{ result.project_no }}</strong></div>
+      <div><span>核对时间</span><strong>{{ result.checked_at|dt }}</strong></div>
+      <div><span>列表页</span><strong>{{ result.pages|length }} 页</strong></div>
+      <div><span>相关公告</span><strong>{{ result.announcement_count }} 条</strong></div>
+      <div><span>重复合并</span><strong>{{ result.duplicates_skipped }} 条</strong></div>
+    </section>
+
+    {% if result.issues %}
+    <section class="alert warning" role="alert">
+      <strong>需要人工核实</strong>
+      <ul>
+        {% for issue in result.issues %}
+        <li>{{ issue }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    {% if result.notes %}
+    <section class="notes">
+      {% for note in result.notes %}<span>{{ note }}</span>{% endfor %}
+    </section>
+    {% endif %}
+
+    <section class="panel timeline-panel" aria-labelledby="timeline-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">结论依据</p>
+          <h2 id="timeline-title">公告时间链</h2>
+        </div>
+        <a href="{{ result.list_url }}" target="_blank" rel="noopener noreferrer">打开原始列表页</a>
+      </div>
+
+      {% if result.announcements %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>发布时间</th>
+              <th>公告类型</th>
+              <th>标题与来源</th>
+              <th>提取的截标时间</th>
+              <th>在结论中的作用</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in result.announcements %}
+            <tr class="kind-{{ item.kind }}{% if item.ignored_after_cancel %} ignored{% endif %}{% if not item.fetch_ok %} fetch-failed{% endif %}">
+              <td class="time-cell">{{ item.publish_time|dt }}</td>
+              <td><span class="badge badge-{{ item.kind }}">{{ item.kind_label }}</span></td>
+              <td>
+                <div class="notice-title">{{ item.title }}</div>
+                <div class="source-links">
+                  <a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">公告来源</a>
+                  {% if item.found_on %}<a href="{{ item.found_on }}" target="_blank" rel="noopener noreferrer">发现列表页</a>{% endif %}
+                </div>
+                {% if item.source_note %}<div class="muted">{{ item.source_note }}</div>{% endif %}
+                {% if item.error %}<div class="error-text">{{ item.error }}</div>{% endif %}
+              </td>
+              <td>
+                {% if item.deadline %}
+                  <strong>{{ item.deadline|dt }}</strong>
+                  {% if item.deadline_text %}<div class="muted">{{ item.deadline_text }}</div>{% endif %}
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                {% if not item.fetch_ok %}
+                  <span class="role pending-role">详情失败，需核实</span>
+                {% elif item.ignored_after_cancel %}
+                  <span class="role ignored-role">取消后普通更正，不恢复招标</span>
+                {% elif result.cancellation_notice and item == result.cancellation_notice %}
+                  <span class="role cancel-role">取消状态依据</span>
+                {% elif result.deadline_notice and item == result.deadline_notice and result.status in ['active', 'expired'] %}
+                  <span class="role deadline-role">当前截标时间依据</span>
+                {% else %}
+                  <span class="muted">时间链节点</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">未找到可纳入时间链的相关公告。</div>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="rules panel" aria-labelledby="rules-title">
+      <p class="eyebrow">判定说明</p>
+      <h2 id="rules-title">系统如何得出结论</h2>
+      <ol>
+        <li>从输入的列表页出发，仅跟踪同站分页链接，并抓取与项目编号匹配的详情页。</li>
+        <li>同一公告在多个分页或镜像地址重复出现时，只保留一条进入时间链。</li>
+        <li>按发布时间先后应用原公告与更正公告；最新有效截标时间作为当前截标时间。</li>
+        <li>取消公告发布后，项目不再接受投标；其后的普通更正公告不会恢复招标。</li>
+        <li>相关详情抓取失败、同一时刻更正公告给出冲突截标时间，或关键时间缺失时，结论标记为“待核实”。</li>
+      </ol>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,10 @@
+
+:root{--blue:#1d4ed8;--navy:#172554;--bg:#f4f7fb;--line:#dbe4f0;--text:#1f2937}
+*{box-sizing:border-box}body{margin:0;font-family:"Noto Sans SC","Microsoft YaHei",Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}.site-header{background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;padding:28px 0}
+.wrap{width:min(1080px,92%);margin:0 auto}.brand{font-size:26px;font-weight:700}.subtitle{opacity:.86;margin-top:4px}.topnav{margin-top:18px;display:flex;gap:18px}.topnav a{color:#fff;font-weight:600}
+main{padding:32px 0 56px}.panel{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 24px rgba(15,23,42,.06);padding:28px}
+.notice-list{display:grid;gap:14px;margin-top:22px}.notice-item{border:1px solid var(--line);border-radius:12px;padding:18px 20px;background:#fff}
+.notice-item h2{font-size:19px;margin:8px 0}.notice-type{display:inline-block;background:#e0ecff;color:#1d4ed8;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:700}
+.meta{color:#64748b;font-size:14px;display:flex;gap:20px;flex-wrap:wrap}.pagination{display:flex;gap:8px;align-items:center;margin-top:26px}.pagination a,.pagination span{border:1px solid var(--line);border-radius:8px;padding:6px 12px;background:#fff}.pagination .current{background:var(--blue);border-color:var(--blue);color:#fff}.breadcrumb{font-size:14px;color:#64748b;margin-bottom:16px}
+.announcement-detail h1{font-size:28px;line-height:1.35;margin:8px 0 18px;color:var(--navy)}.publish-meta{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0;margin-bottom:24px}.content{font-size:16px}.content p{margin:14px 0}.content strong{color:#111827}.footer{color:#64748b;font-size:13px;text-align:center;padding:24px}.demo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-top:22px}.demo-card{border:1px solid var(--line);border-radius:12px;padding:18px;background:#f8fafc}.demo-card code{background:#e2e8f0;padding:2px 6px;border-radius:6px}

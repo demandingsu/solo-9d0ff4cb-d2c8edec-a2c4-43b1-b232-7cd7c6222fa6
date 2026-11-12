@@ -4,7 +4,10 @@ from pathlib import Path
 from urllib.parse import urljoin, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1] / "sample_site"
-INTENTIONALLY_MISSING = {"/detail/d-004-correction.html"}
+INTENTIONALLY_MISSING = {
+    "/detail/d-004-correction.html",
+    "/detail/r-103-original-page-2.html",
+}
 
 
 class LinkParser(HTMLParser):
@@ -47,6 +50,22 @@ class SampleSiteTests(unittest.TestCase):
         page_three = "\n".join(self.parse_links("notices/page-3.html"))
         self.assertIn("d-001-original.html", page_two)
         self.assertIn("d-001-original.html", page_three)
+
+    def test_requirement_samples_are_listed_on_first_page(self):
+        links = set(self.parse_links("notices/page-1.html"))
+        for sample in [
+            "r-101-original.html",
+            "r-102-original-page-1.html",
+            "r-103-original-page-1.html",
+            "r-104-original-page-1.html",
+        ]:
+            self.assertIn(f"../detail/{sample}", links)
+
+    def test_requirement_continuation_pages_are_linked(self):
+        page_one = self.parse_links("detail/r-102-original-page-1.html")
+        self.assertIn("r-102-original-page-2.html", page_one)
+        page_two = self.parse_links("detail/r-102-original-page-2.html")
+        self.assertIn("r-102-original-page-1.html", page_two)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>采购需求清单整理</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="hero">
+    <div class="container hero-inner">
+      <div>
+        <p class="eyebrow">Requirement List Extractor</p>
+        <h1>采购需求清单整理</h1>
+        <p class="hero-copy">输入项目编号和公告目录网址，沿同站分页读取该项目的采购需求详情，还原合并表头与包号，按包号、品目号整理品目、数量和单位。</p>
+      </div>
+      <div class="hero-card" aria-label="整理规则">
+        <strong>整理规则</strong>
+        <span>还原 rowspan / colspan 合并单元格</span>
+        <span>续表仅在分页连续时承接包号</span>
+        <span>完全相同的重复行合并</span>
+        <span>字段冲突保留两条原文及来源</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <nav class="app-tabs" aria-label="功能入口">
+      <a href="/">截标状态核对</a>
+      <a class="active" href="/requirements">采购需求清单整理</a>
+    </nav>
+
+    <section class="panel search-panel" aria-labelledby="search-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">输入查询条件</p>
+          <h2 id="search-title">项目与公告目录</h2>
+        </div>
+        <a class="sample-site-link" href="http://localhost:8080/index.html" target="_blank" rel="noopener noreferrer">打开本地样本站点</a>
+      </div>
+
+      <form method="post" class="search-form">
+        <label>
+          <span>项目编号</span>
+          <input name="project_no" value="{{ project_no }}" placeholder="例如：GSB-2026-101" required autocomplete="off">
+        </label>
+        <label class="wide">
+          <span>公告目录网址</span>
+          <input name="list_url" type="url" value="{{ list_url }}" placeholder="http://localhost:8080/notices/page-1.html" required autocomplete="off">
+        </label>
+        <div class="form-actions">
+          <button type="submit">整理清单</button>
+          <a href="/requirements" class="secondary-action">恢复示例</a>
+        </div>
+      </form>
+
+      <div class="sample-projects" aria-label="样本项目">
+        <span>需求清单样例：</span>
+        <code>GSB-2026-101</code><em>合并表头</em>
+        <code>GSB-2026-102</code><em>跨页续表</em>
+        <code>GSB-2026-103</code><em>缺页不完整</em>
+        <code>GSB-2026-104</code><em>重复与冲突</em>
+      </div>
+    </section>
+
+    {% if error %}
+    <section class="alert error" role="alert">
+      <strong>无法完成整理</strong>
+      <p>{{ error }}</p>
+    </section>
+    {% endif %}
+
+    {% if result %}
+    <section class="result-banner {% if result.complete %}status-active{% else %}status-pending{% endif %}" aria-live="polite">
+      <div class="result-main">
+        <p class="eyebrow">清单状态</p>
+        <h2>{{ result.completeness_label }}</h2>
+        <p>
+          {% if result.complete %}
+            已读取全部相关详情与分页，明细字段可逐条核对。
+          {% else %}
+            存在未成功读取的分页或相关详情，以下仅为已取得的明细，结果不完整。
+          {% endif %}
+        </p>
+      </div>
+      <div class="deadline-card">
+        <span>整理出的品目行</span>
+        <strong>{{ result.entries|length }} 行</strong>
+        <small>{{ result.package_count }} 个采购包</small>
+      </div>
+    </section>
+
+    <section class="summary-grid" aria-label="整理摘要">
+      <div><span>项目编号</span><strong>{{ result.project_no }}</strong></div>
+      <div><span>整理时间</span><strong>{{ result.checked_at|dt }}</strong></div>
+      <div><span>列表页</span><strong>{{ result.listing_pages|length }} 页</strong></div>
+      <div><span>详情页</span><strong>{{ result.detail_pages|length }} 个</strong></div>
+      <div><span>需求表 / 重复合并</span><strong>{{ result.tables_found }} 张 / {{ result.duplicate_rows_merged }} 条</strong></div>
+    </section>
+
+    {% if result.issues %}
+    <section class="alert warning" role="alert">
+      <strong>需要人工核实</strong>
+      <ul>
+        {% for issue in result.issues %}
+        <li>{{ issue }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    {% if result.notes %}
+    <section class="notes">
+      {% for note in result.notes %}<span>{{ note }}</span>{% endfor %}
+    </section>
+    {% endif %}
+
+    <section class="panel timeline-panel" aria-labelledby="req-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">整理结果</p>
+          <h2 id="req-title">采购包与品目明细</h2>
+        </div>
+        <a href="{{ result.list_url }}" target="_blank" rel="noopener noreferrer">打开原始公告目录</a>
+      </div>
+
+      {% if result.entries %}
+      <div class="table-wrap">
+        <table class="requirement-table">
+          <thead>
+            <tr>
+              <th>包号</th>
+              <th>品目号</th>
+              <th>名称</th>
+              <th>数量</th>
+              <th>单位</th>
+              <th>来源与核对提示</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in result.entries %}
+            <tr class="req-{{ entry.status }}">
+              <td class="package-cell">
+                <strong>{{ entry.package_no or '—' }}</strong>
+                <span class="badge pkg-{{ entry.package_status }}">{{ entry.package_status_label }}</span>
+                {% if entry.package_note %}<div class="muted">{{ entry.package_note }}</div>{% endif %}
+              </td>
+              <td class="time-cell">{{ entry.item_no or '—' }}</td>
+              <td>
+                {% if entry.is_conflict %}
+                  {% for variant in entry.variants %}
+                  <div class="conflict-variant">
+                    <span class="variant-label">原文 {{ loop.index }}</span>
+                    <strong>{{ variant.name or '—' }}</strong>
+                    <div class="muted">数量 {{ variant.quantity or '—' }}；单位 {{ variant.unit or '—' }}</div>
+                    {% for source in variant.sources %}
+                    <div class="source-links">
+                      <a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.label }}</a>
+                      <span class="raw-row">原行：{{ source.raw }}</span>
+                    </div>
+                    {% endfor %}
+                  </div>
+                  {% endfor %}
+                {% else %}
+                  {% set variant = entry.variants[0] %}
+                  <span class="notice-title">{{ variant.name or '—' }}</span>
+                  <div class="source-links">
+                    {% for source in variant.sources %}
+                    <a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.label }}</a>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </td>
+              <td>
+                {% if entry.is_conflict %}
+                  {% for variant in entry.variants %}
+                  <div>{{ variant.quantity or '—' }}</div>
+                  {% endfor %}
+                {% else %}{{ entry.variants[0].quantity or '—' }}{% endif %}
+              </td>
+              <td>
+                {% if entry.is_conflict %}
+                  {% for variant in entry.variants %}
+                  <div>{{ variant.unit or '—' }}</div>
+                  {% endfor %}
+                {% else %}{{ entry.variants[0].unit or '—' }}{% endif %}
+              </td>
+              <td>
+                <span class="role req-role-{{ entry.status }}">{{ entry.status_label }}</span>
+                {% if entry.merged_count %}<div class="muted">已合并 {{ entry.merged_count }} 条重复行</div>{% endif %}
+                {% for note in entry.notes %}<div class="muted">{{ note }}</div>{% endfor %}
+                {% if not entry.is_conflict and entry.variants[0].sources|length > 1 %}
+                <div class="muted">
+                  相同行来源：
+                  {% for source in entry.variants[0].sources %}
+                  <a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.label }}</a>{% if not loop.last %}、{% endif %}
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">未提取到采购需求明细。请确认项目编号与公告目录是否正确。</div>
+      {% endif %}
+    </section>
+
+    {% if result.detail_pages %}
+    <section class="panel timeline-panel" aria-labelledby="pages-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">读取过程</p>
+          <h2 id="pages-title">已读取的详情与分页</h2>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="pages-table">
+          <thead>
+            <tr><th>详情 / 分页</th><th>读取状态</th><th>需求表</th><th>来源链接</th></tr>
+          </thead>
+          <tbody>
+            {% for page in result.detail_pages %}
+            <tr class="{% if not page.fetch_ok %}fetch-failed{% elif page.is_continuation %}continuation{% endif %}">
+              <td class="notice-title">{{ page.label }}</td>
+              <td>
+                {% if page.fetch_ok %}
+                  <span class="badge pkg-confirmed">已读取</span>
+                {% else %}
+                  <span class="badge pkg-pending">读取失败</span>
+                  <div class="error-text">{{ page.error }}</div>
+                {% endif %}
+                {% if page.is_continuation %}<div class="muted">分页不连续，后续无包号行待核实</div>{% endif %}
+              </td>
+              <td>{{ page.table_count }} 张</td>
+              <td><a href="{{ page.url }}" target="_blank" rel="noopener noreferrer">打开来源</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+    {% endif %}
+
+    <section class="rules panel" aria-labelledby="rules-title">
+      <p class="eyebrow">整理说明</p>
+      <h2 id="rules-title">系统如何整理清单</h2>
+      <ol>
+        <li>从公告目录出发仅跟踪同站分页，抓取与项目编号匹配的详情页，并读取详情自身的采购需求分页。</li>
+        <li>按 rowspan / colspan 还原合并表头与包号；数量、单位等列由表头文字识别，不依赖固定列顺序。</li>
+        <li>续表未写包号时，仅在分页连续且已知上一包号的情况下承接；分页中断后的无包号行标为“待核实”。</li>
+        <li>按包号和品目号合并完全相同的行；同一键但字段不同时保留全部原文，并逐条标明来源链接，不擅自选值。</li>
+        <li>分页或相关详情读取失败时，仍显示已取得的明细，并将整份结果标记为“不完整”。</li>
+      </ol>
+    </section>
+  </main>
+</body>
+</html>

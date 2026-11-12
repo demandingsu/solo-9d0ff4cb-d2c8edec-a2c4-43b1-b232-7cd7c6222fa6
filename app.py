@@ -6,6 +6,7 @@ import os
 from flask import Flask, render_template, request
 
 from tendercheck.parsing import BEIJING_TZ, format_datetime
+from tendercheck.requirements import RequirementsScraper
 from tendercheck.scraper import InputError, ListFetchError, TenderScraper
 
 logging.basicConfig(
@@ -22,6 +23,7 @@ DEFAULT_LIST_URL = os.getenv(
     "DEMO_LIST_URL",
     "http://localhost:8080/notices/page-1.html",
 )
+DEFAULT_REQUIREMENT_PROJECT_NO = os.getenv("DEMO_REQUIREMENT_PROJECT_NO", "GSB-2026-101")
 
 
 def _int_env(name: str, default: int) -> int:
@@ -73,6 +75,40 @@ def index():
         result=result,
         error=error,
         beijing_tz=BEIJING_TZ,
+    )
+
+
+@app.route("/requirements", methods=["GET", "POST"])
+def requirements():
+    project_no = DEFAULT_REQUIREMENT_PROJECT_NO
+    list_url = DEFAULT_LIST_URL
+    result = None
+    error = None
+
+    if request.method == "POST":
+        project_no = request.form.get("project_no", "").strip()
+        list_url = request.form.get("list_url", "").strip()
+        try:
+            scraper = RequirementsScraper(
+                project_no=project_no,
+                list_url=list_url,
+                max_pages=_int_env("MAX_LIST_PAGES", 15),
+                max_details=_int_env("MAX_DETAIL_PAGES", 80),
+                max_requirement_pages=_int_env("MAX_REQUIREMENT_PAGES", 20),
+            )
+            result = scraper.run()
+        except (InputError, ListFetchError) as exc:
+            error = str(exc)
+        except Exception:
+            logger.exception("requirement extraction failed")
+            error = "整理过程中发生未预期错误，请检查网址后重试。"
+
+    return render_template(
+        "requirements.html",
+        project_no=project_no,
+        list_url=list_url,
+        result=result,
+        error=error,
     )
 
 

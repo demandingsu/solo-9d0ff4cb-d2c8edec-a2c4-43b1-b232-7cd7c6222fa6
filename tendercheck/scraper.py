@@ -334,6 +334,33 @@ class TenderScraper:
                 if close is not None:
                     close()
 
+    def listing_candidates(self) -> tuple[list[str], list[Candidate], list[str]]:
+        """Crawl the list pages and return the project-related detail candidates.
+
+        Used by the requirement-list feature, which needs the same paginated
+        listing traversal but different detail handling. Candidates marked
+        ``related`` match the project number from the list page; when the list
+        page omits project numbers, fallback candidates are returned instead.
+        """
+
+        pages, candidates, issues, _ = self._crawl_listing_pages()
+        related = [candidate for candidate in candidates if candidate.related]
+        if related:
+            if len(related) > self.max_details:
+                issues.append(
+                    f"相关详情链接超过上限 {self.max_details}，可能存在未核对的公告"
+                )
+            return pages, related[: self.max_details], issues
+
+        selected = candidates[: self.max_details]
+        for candidate in selected:
+            candidate.fallback = True
+        if len(candidates) > self.max_details:
+            issues.append(
+                f"候选详情链接超过上限 {self.max_details}，可能存在未核对的公告"
+            )
+        return pages, selected, issues
+
     def _crawl_listing_pages(self) -> tuple[list[str], list[Candidate], list[str], int]:
         queue = [self.list_url]
         visited_pages: set[str] = set()

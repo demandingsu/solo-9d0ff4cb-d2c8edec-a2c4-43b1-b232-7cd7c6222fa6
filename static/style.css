@@ -146,6 +146,28 @@ main { padding: 0 0 56px; }
   font-size: 14px;
 }
 
+.app-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+.app-tabs a {
+  padding: 9px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 800;
+}
+.app-tabs a.active {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+.app-tabs a.active:hover { text-decoration: none; }
+
 .search-form {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr) auto;
@@ -359,6 +381,40 @@ tbody tr.fetch-failed { background: #fffbeb; }
 .cancel-role { color: #be123c; background: #ffe4e6; }
 .pending-role { color: #92400e; background: #fef3c7; }
 .ignored-role { color: #64748b; background: #e2e8f0; }
+
+.pkg-confirmed { color: #1d4ed8; background: #dbeafe; }
+.pkg-inherited { color: #92400e; background: #fef3c7; }
+.pkg-pending { color: #be123c; background: #ffe4e6; }
+.req-role-ok { color: #047857; background: #d1fae5; }
+.req-role-conflict { color: #be123c; background: #ffe4e6; }
+.req-role-pending { color: #92400e; background: #fef3c7; }
+
+.requirement-table { min-width: 1120px; }
+.requirement-table tbody tr.req-conflict { background: #fff7f7; }
+.requirement-table tbody tr.req-pending { background: #fffbeb; }
+.package-cell { min-width: 150px; }
+.package-cell strong { display: block; margin-bottom: 6px; }
+.conflict-variant {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px dashed #fca5a5;
+  border-radius: 12px;
+  background: #fff;
+}
+.conflict-variant:last-child { margin-bottom: 0; }
+.variant-label {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #ffe4e6;
+  color: #be123c;
+  font-size: 12px;
+  font-weight: 800;
+}
+.raw-row { color: var(--muted); font-size: 12px; word-break: break-all; }
+.pages-table { min-width: 820px; }
+tbody tr.continuation { background: #fffbeb; }
 
 .empty-state {
   padding: 34px;

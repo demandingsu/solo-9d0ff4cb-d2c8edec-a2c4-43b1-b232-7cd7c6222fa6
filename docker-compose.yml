@@ -7,11 +7,13 @@ services:
     environment:
       FLASK_SECRET_KEY: local-demo-secret
       DEMO_PROJECT_NO: GSB-2026-001
+      DEMO_REQUIREMENT_PROJECT_NO: GSB-2026-101
       DEMO_LIST_URL: http://localhost:8080/notices/page-1.html
       SAMPLE_SITE_PUBLIC_URL: http://localhost:8080
       SAMPLE_SITE_INTERNAL_URL: http://sample-site:8080
       MAX_LIST_PAGES: 15
       MAX_DETAIL_PAGES: 80
+      MAX_REQUIREMENT_PAGES: 20
       TZ: Asia/Shanghai
     depends_on:
       sample-site:
